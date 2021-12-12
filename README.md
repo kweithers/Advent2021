@@ -1,5 +1,7 @@
 ## 2021 Advent of Code
 
+https://adventofcode.com/2021/
+
 This year, I'm improving my Go skills.
 
-https://adventofcode.com/2021/
+![](festive_gopher.jpg)

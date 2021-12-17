@@ -70,9 +70,6 @@ func main() {
 }
 
 func visit(visited *[100][100]bool, heights *[100][100]int, current_basin *int, j int, i int) {
-	if visited[j][i] {
-		return
-	}
 	visited[j][i] = true
 	(*current_basin)++
 	if j > 0 { //Go up

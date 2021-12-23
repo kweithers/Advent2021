@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -21,19 +22,10 @@ func main() {
 		}
 	}
 
-	// Test Cases
-
-	// bits := HexToBin("D2FE28")
-	// bits := HexToBin("38006F45291200")
-	// bits := HexToBin("EE00D40C823060")
-	// bits := HexToBin("8A004A801A8002F478")
-	// bits := HexToBin("620080001611562C8802118E34")
-	// bits := HexToBin("C0015000016115A2E0802F182340")
-	// bits := HexToBin("A0016C880162017C3686B18A3D4780")
-
 	var version_number_counter int
-	process_packet(&bits, 0, &version_number_counter)
+	_, part2 := process_packet(&bits, 0, &version_number_counter)
 	fmt.Println("Part 1:", version_number_counter)
+	fmt.Println("Part 2:", part2)
 }
 
 func HexToBin(hex string) string {
@@ -51,15 +43,20 @@ func BinToDec(bin string) int {
 	return int(ui)
 }
 
-//Returns the starting index of the next packet
-func process_packet(bits *string, start_index int, version_number_counter *int) int {
+//Returns (the starting index of the next packet, value of the packet)
+func process_packet(bits *string, start_index int, version_number_counter *int) (int, int) {
 	//First three bits are the version number
 	*version_number_counter += BinToDec((*bits)[start_index : start_index+3])
-	fmt.Println("Version:", BinToDec((*bits)[start_index:start_index+3]))
 
-	//Second three bits are the Packet ID
+	//Second three bits are the packet type id
 	packet_type_id := BinToDec((*bits)[start_index+3 : start_index+6])
 
+	//Keep track of our place in the bit string
+	var x int
+	//Record the value of a packet
+	var value int
+	//Record the values of the sub packets
+	sub_packet_values := make([]int, 0)
 	//If the packet type id is 4, this is a literal value
 	if packet_type_id == 4 {
 		i := 0
@@ -75,8 +72,7 @@ func process_packet(bits *string, start_index int, version_number_counter *int) 
 				break
 			}
 		}
-		fmt.Println("Literal Value:", BinToDec(s)) //This is the literal value
-		return start_index + 6 + (i * 5)           //Starting index of next packet
+		return start_index + 6 + (i * 5), BinToDec(s) //Starting index of next packet, literal value
 	} else if packet_type_id != 4 {
 		//If the packet type is NOT 4, this packet is an operator
 
@@ -87,27 +83,74 @@ func process_packet(bits *string, start_index int, version_number_counter *int) 
 		//length of the sub-packets contained by this packet
 		if length_type_id == 0 {
 			length_of_subpackets := BinToDec((*bits)[start_index+7 : start_index+22])
-			fmt.Println("Length of Subpackets", length_of_subpackets)
 
-			x := start_index + 22
+			x = start_index + 22
 			for x < start_index+22+length_of_subpackets {
-				x = process_packet(bits, x, version_number_counter)
+				x, value = process_packet(bits, x, version_number_counter)
+				sub_packet_values = append(sub_packet_values, value)
 			}
-			return x
 		}
 		//If One, the the next 11 bits are a number that represents the number of subpackets immediately
 		//contained by this packet
 		if length_type_id == 1 {
 			number_of_subpackets := BinToDec((*bits)[start_index+7 : start_index+18])
-			fmt.Println("Number of Subpackets", number_of_subpackets)
 
-			x := start_index + 18
+			x = start_index + 18
 			for i := 0; i < number_of_subpackets; i++ {
-				x = process_packet(bits, x, version_number_counter)
+				x, value = process_packet(bits, x, version_number_counter)
+				sub_packet_values = append(sub_packet_values, value)
 			}
-
-			return x
 		}
 	}
-	return 0
+
+	//Now, process the contents of this packet and apply the correct operation
+	if packet_type_id == 0 { //Sum
+		sum := 0
+		for _, v := range sub_packet_values {
+			sum += v
+		}
+		return x, sum
+	} else if packet_type_id == 1 { //Product
+		prod := 1
+		for _, v := range sub_packet_values {
+			prod *= v
+		}
+		return x, prod
+	} else if packet_type_id == 2 { //Minimum
+		min := math.MaxInt
+		for _, v := range sub_packet_values {
+			if v < min {
+				min = v
+			}
+		}
+		return x, min
+	} else if packet_type_id == 3 { //Maximum
+		max := math.MinInt
+		for _, v := range sub_packet_values {
+			if v > max {
+				max = v
+			}
+		}
+		return x, max
+	} else if packet_type_id == 5 { //Greater than
+		v := 0
+		if sub_packet_values[0] > sub_packet_values[1] {
+			v = 1
+		}
+		return x, v
+	} else if packet_type_id == 6 { //Less than
+		v := 0
+		if sub_packet_values[0] < sub_packet_values[1] {
+			v = 1
+		}
+		return x, v
+	} else if packet_type_id == 7 { //Equal to
+		v := 0
+		if sub_packet_values[0] == sub_packet_values[1] {
+			v = 1
+		}
+		return x, v
+	}
+
+	return x, -1 //Will never reach here
 }

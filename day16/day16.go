@@ -12,7 +12,6 @@ import (
 func main() {
 	file, _ := os.Open("day16.txt")
 	fscanner := bufio.NewScanner(file)
-
 	bits := ""
 
 	for fscanner.Scan() {
@@ -29,18 +28,13 @@ func main() {
 }
 
 func HexToBin(hex string) string {
-	s := ""
-	for _, c := range hex {
-		ui, _ := strconv.ParseUint(string(c), 16, 64)
-		// %04b indicates base 2, zero padded, with 4 characters
-		s += fmt.Sprintf("%04b", ui)
-	}
-	return s
+	x, _ := strconv.ParseInt(hex, 16, 64)
+	return fmt.Sprintf("%04b", x)
 }
 
 func BinToDec(bin string) int {
-	ui, _ := strconv.ParseUint(bin, 2, 64)
-	return int(ui)
+	x, _ := strconv.ParseInt(bin, 2, 64)
+	return int(x)
 }
 
 //Returns (the starting index of the next packet, value of the packet)
@@ -57,8 +51,10 @@ func process_packet(bits *string, start_index int, version_number_counter *int) 
 	var value int
 	//Record the values of the sub packets
 	sub_packet_values := make([]int, 0)
+
+	switch packet_type_id {
 	//If the packet type id is 4, this is a literal value
-	if packet_type_id == 4 {
+	case 4:
 		i := 0
 		s := ""
 		for {
@@ -73,8 +69,9 @@ func process_packet(bits *string, start_index int, version_number_counter *int) 
 			}
 		}
 		return start_index + 6 + (i * 5), BinToDec(s) //Starting index of next packet, literal value
-	} else if packet_type_id != 4 {
-		//If the packet type is NOT 4, this packet is an operator
+
+	//If the packet type is NOT 4, this packet is an operator
+	default:
 
 		//Next Bit is the Length Type ID
 		length_type_id := BinToDec((*bits)[start_index+6 : start_index+7])
@@ -104,19 +101,20 @@ func process_packet(bits *string, start_index int, version_number_counter *int) 
 	}
 
 	//Now, process the contents of this packet and apply the correct operation
-	if packet_type_id == 0 { //Sum
+	switch packet_type_id {
+	case 0: //Sum
 		sum := 0
 		for _, v := range sub_packet_values {
 			sum += v
 		}
 		return x, sum
-	} else if packet_type_id == 1 { //Product
+	case 1: //Product
 		prod := 1
 		for _, v := range sub_packet_values {
 			prod *= v
 		}
 		return x, prod
-	} else if packet_type_id == 2 { //Minimum
+	case 2: //Minimum
 		min := math.MaxInt
 		for _, v := range sub_packet_values {
 			if v < min {
@@ -124,7 +122,7 @@ func process_packet(bits *string, start_index int, version_number_counter *int) 
 			}
 		}
 		return x, min
-	} else if packet_type_id == 3 { //Maximum
+	case 3: //Maximum
 		max := math.MinInt
 		for _, v := range sub_packet_values {
 			if v > max {
@@ -132,19 +130,19 @@ func process_packet(bits *string, start_index int, version_number_counter *int) 
 			}
 		}
 		return x, max
-	} else if packet_type_id == 5 { //Greater than
+	case 5: //Greater than
 		v := 0
 		if sub_packet_values[0] > sub_packet_values[1] {
 			v = 1
 		}
 		return x, v
-	} else if packet_type_id == 6 { //Less than
+	case 6: //Less than
 		v := 0
 		if sub_packet_values[0] < sub_packet_values[1] {
 			v = 1
 		}
 		return x, v
-	} else if packet_type_id == 7 { //Equal to
+	case 7: //Equal to
 		v := 0
 		if sub_packet_values[0] == sub_packet_values[1] {
 			v = 1

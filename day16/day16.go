@@ -72,13 +72,13 @@ func process_packet(bits *string, start_index int, version_number_counter *int) 
 
 	//If the packet type is NOT 4, this packet is an operator
 	default:
-
 		//Next Bit is the Length Type ID
 		length_type_id := BinToDec((*bits)[start_index+6 : start_index+7])
 
 		//If Zero, then the next 15 bits are a number that represent the total bit
 		//length of the sub-packets contained by this packet
-		if length_type_id == 0 {
+		switch length_type_id {
+		case 0:
 			length_of_subpackets := BinToDec((*bits)[start_index+7 : start_index+22])
 
 			x = start_index + 22
@@ -86,10 +86,10 @@ func process_packet(bits *string, start_index int, version_number_counter *int) 
 				x, value = process_packet(bits, x, version_number_counter)
 				sub_packet_values = append(sub_packet_values, value)
 			}
-		}
+
 		//If One, the the next 11 bits are a number that represents the number of subpackets immediately
 		//contained by this packet
-		if length_type_id == 1 {
+		case 1:
 			number_of_subpackets := BinToDec((*bits)[start_index+7 : start_index+18])
 
 			x = start_index + 18
@@ -98,57 +98,57 @@ func process_packet(bits *string, start_index int, version_number_counter *int) 
 				sub_packet_values = append(sub_packet_values, value)
 			}
 		}
-	}
 
-	//Now, process the contents of this packet and apply the correct operation
-	switch packet_type_id {
-	case 0: //Sum
-		sum := 0
-		for _, v := range sub_packet_values {
-			sum += v
-		}
-		return x, sum
-	case 1: //Product
-		prod := 1
-		for _, v := range sub_packet_values {
-			prod *= v
-		}
-		return x, prod
-	case 2: //Minimum
-		min := math.MaxInt
-		for _, v := range sub_packet_values {
-			if v < min {
-				min = v
+		//Now, process the contents of this packet and apply the correct operation
+		switch packet_type_id {
+		case 0: //Sum
+			sum := 0
+			for _, v := range sub_packet_values {
+				sum += v
 			}
-		}
-		return x, min
-	case 3: //Maximum
-		max := math.MinInt
-		for _, v := range sub_packet_values {
-			if v > max {
-				max = v
+			return x, sum
+		case 1: //Product
+			prod := 1
+			for _, v := range sub_packet_values {
+				prod *= v
 			}
+			return x, prod
+		case 2: //Minimum
+			min := math.MaxInt
+			for _, v := range sub_packet_values {
+				if v < min {
+					min = v
+				}
+			}
+			return x, min
+		case 3: //Maximum
+			max := math.MinInt
+			for _, v := range sub_packet_values {
+				if v > max {
+					max = v
+				}
+			}
+			return x, max
+		case 5: //Greater than
+			v := 0
+			if sub_packet_values[0] > sub_packet_values[1] {
+				v = 1
+			}
+			return x, v
+		case 6: //Less than
+			v := 0
+			if sub_packet_values[0] < sub_packet_values[1] {
+				v = 1
+			}
+			return x, v
+		case 7: //Equal to
+			v := 0
+			if sub_packet_values[0] == sub_packet_values[1] {
+				v = 1
+			}
+			return x, v
 		}
-		return x, max
-	case 5: //Greater than
-		v := 0
-		if sub_packet_values[0] > sub_packet_values[1] {
-			v = 1
-		}
-		return x, v
-	case 6: //Less than
-		v := 0
-		if sub_packet_values[0] < sub_packet_values[1] {
-			v = 1
-		}
-		return x, v
-	case 7: //Equal to
-		v := 0
-		if sub_packet_values[0] == sub_packet_values[1] {
-			v = 1
-		}
-		return x, v
-	}
 
-	return x, -1 //Will never reach here
+		return x, -1 //Will never reach here
+	}
 }

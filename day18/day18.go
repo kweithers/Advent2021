@@ -25,7 +25,7 @@ func main() {
 	for i, l := range lines {
 		current_depth := 1
 
-		//Increase the depth on all existing items by 1
+		//Increase the depth on all existing items by 1, since we are adding it to the next number
 		if i > 1 { //Except for the first two numbers we read
 			for i := range items {
 				items[i].depth++
@@ -47,16 +47,60 @@ func main() {
 
 		//Reduce the number
 		done := false
-		fmt.Println("Before reduction", items)
 		for !done {
 			items, done = apply_action(items)
 		}
-		fmt.Println("After reduction", items)
 	}
 	fmt.Println("Part 1:", calculate_magnitude(items))
+
+	//Part 2
+	max_mag := 0
+	for i := 0; i < len(lines); i++ {
+		for j := 0; j < len(lines); j++ {
+			if i == j {
+				continue
+			}
+			items := make([]item, 0)
+			current_depth := 1
+			//Append the first number
+			for _, v := range lines[i] {
+				if num, err := strconv.Atoi(string(v)); err == nil {
+					items = append(items, item{value: num, depth: current_depth})
+				} else if string(v) == "[" {
+					current_depth++
+				} else if string(v) == "]" {
+					current_depth--
+				}
+			}
+			//Append the second number
+			for _, v := range lines[j] {
+				if num, err := strconv.Atoi(string(v)); err == nil {
+					items = append(items, item{value: num, depth: current_depth})
+				} else if string(v) == "[" {
+					current_depth++
+				} else if string(v) == "]" {
+					current_depth--
+				}
+			}
+			//Reduce it
+			done := false
+			for !done {
+				items, done = apply_action(items)
+			}
+			//Calculate Magnitude
+			mag := calculate_magnitude(items)
+			//If it's the biggest so far, record it
+			if mag > max_mag {
+				max_mag = mag
+			}
+		}
+	}
+	fmt.Println("Part 2:", max_mag)
+
 }
 
-//This will read through the items and apply the first correct action, then returns the new list of items
+//This will read through the items and apply the first correct action
+//It returns the new list of items, and a bool representing whether we are done reducing
 func apply_action(items []item) ([]item, bool) {
 	//1. If we find a pair to explode
 	for index, it := range items {
@@ -64,7 +108,6 @@ func apply_action(items []item) ([]item, bool) {
 			//These are the left and right items of that pair
 			left := items[index]
 			right := items[index+1]
-			// fmt.Println(index, left, right)
 
 			//Add the left one to its left neighbor, if it exists
 			if index > 0 {
@@ -74,12 +117,11 @@ func apply_action(items []item) ([]item, bool) {
 			if index < len(items)-2 {
 				items[index+2].value += right.value
 			}
-			//Remove left and right from the list of items
 
+			//Remove left and right from the list of items
 			new_items := items[:index]
 			new_items = append(new_items, item{value: 0, depth: left.depth - 1}) //Add the regular value zero item
 			new_items = append(new_items, items[index+2:]...)
-			// fmt.Println("Explode")
 			return new_items, false
 		}
 	}
@@ -90,7 +132,6 @@ func apply_action(items []item) ([]item, bool) {
 			left := it.value / 2
 			right := it.value/2 + remainder
 
-			//Jank but works
 			before := make([]item, len(items[:index]))
 			copy(before, items[:index])
 			after := make([]item, len(items[index+1:]))
@@ -100,7 +141,6 @@ func apply_action(items []item) ([]item, bool) {
 			new_items = append(new_items, item{value: left, depth: it.depth + 1})  //Add the new pair's left item
 			new_items = append(new_items, item{value: right, depth: it.depth + 1}) //Add the new pair's right item
 			new_items = append(new_items, after...)
-			// fmt.Println("Split")
 
 			return new_items, false
 		}
@@ -108,7 +148,7 @@ func apply_action(items []item) ([]item, bool) {
 	return items, true
 }
 
-//Calculate the value of a number: 3*Left + 2*Right
+//Calculate the magnitude of a number: 3*Left + 2*Right
 func calculate_magnitude(items []item) int {
 Outer:
 	for {

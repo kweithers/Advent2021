@@ -148,19 +148,22 @@ func apply_action(items []item) ([]item, bool) {
 	return items, true
 }
 
-//Calculate the magnitude of a number: 3*Left + 2*Right
+//Calculate the magnitude of a final sum using the recursive formula: 3*Left + 2*Right
+//It continues until the entire sum is reduced and we know its magnitude
 func calculate_magnitude(items []item) int {
 Outer:
 	for {
-		if len(items) == 1 {
+		if len(items) == 1 { //If there's only one item left, it contains the magnitude for the sum
 			return items[0].value
 		}
 		for index := range items {
-			if items[index].depth == items[index+1].depth {
+			if items[index].depth == items[index+1].depth { //If we find a pair at the same depth
 				left := items[index]
 				right := items[index+1]
+				//Remove the two items
 				new_items := items[:index]
-				new_items = append(new_items, item{value: 3*left.value + 2*right.value, depth: left.depth - 1}) //Add the regular value zero item
+				//Add the magnitude of this pair
+				new_items = append(new_items, item{value: 3*left.value + 2*right.value, depth: left.depth - 1})
 				new_items = append(new_items, items[index+2:]...)
 				items = new_items
 				continue Outer

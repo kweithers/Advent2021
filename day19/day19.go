@@ -98,12 +98,18 @@ func main() {
 		{2, 1, 0, 1, 1, 1}, {2, 1, 1, 1, 0, -1}, {2, 1, 0, -1, 1, -1}, {2, 1, 1, -1, 0, 1},
 		{2, -1, 0, 1, 1, -1}, {2, -1, 1, -1, 0, -1}, {2, -1, 0, -1, 1, 1}, {2, -1, 1, 1, 0, 1}}
 
+	//Keep track of which scanners are oriented the same way as scanner zero
 	properly_oriented := make(map[int]bool, 0)
 	properly_oriented[0] = true
+
+	beacon_locations := make([]beacon, 0)
+	beacon_locations = append(beacon_locations, beacon{0, 0, 0})
+	//Until all the scanners are properly oriented
 	for len(properly_oriented) < len(scanners) {
 		for x := range matrices {
 			for y := x + 1; y < len(matrices); y++ {
-				if !properly_oriented[x] && !properly_oriented[y] {
+				//If neither are properly oriented OR both are properly oriented, we can skip
+				if (!properly_oriented[x] && !properly_oriented[y]) || (properly_oriented[x] && properly_oriented[y]) {
 					continue
 				}
 				beacon_pairs := make([]beaconPair, 0)
@@ -121,11 +127,13 @@ func main() {
 						r, x_diff, y_diff, z_diff := find_rotation(beacon_pairs, rotations)
 						scanners[y] = reorient(&scanners, r, y, x_diff, y_diff, z_diff)
 						properly_oriented[y] = true
+						beacon_locations = append(beacon_locations, beacon{-x_diff, -y_diff, -z_diff})
 					} else if properly_oriented[y] {
 						beacon_pairs := flip_beacon_pairs(beacon_pairs)
 						r, x_diff, y_diff, z_diff := find_rotation(beacon_pairs, rotations)
 						scanners[x] = reorient(&scanners, r, x, x_diff, y_diff, z_diff)
 						properly_oriented[x] = true
+						beacon_locations = append(beacon_locations, beacon{-x_diff, -y_diff, -z_diff})
 					} else {
 						panic("This should never happen.")
 					}
@@ -141,7 +149,8 @@ func main() {
 			beacon_map[b] = true
 		}
 	}
-	fmt.Println(len(beacon_map))
+	fmt.Println("Part 1:", len(beacon_map))
+	fmt.Println("Beacon locations", find_max_distance(beacon_locations))
 }
 
 func Intersection(a, b []int) (c []int) {
@@ -175,7 +184,7 @@ func find_rotation(beacon_pairs []beaconPair, rotations []rotation) (rotation, i
 		}
 		//If all three of these are all the same, it is the location of the rotated scanner relative to the original scanner
 		if allSameValue(x_vals) && allSameValue(y_vals) && allSameValue(z_vals) {
-			// fmt.Println("SOLVED", r, x_vals[0], y_vals[0], z_vals[0])
+			fmt.Println("SOLVED", r, x_vals[0], y_vals[0], z_vals[0])
 			return r, x_vals[0], y_vals[0], z_vals[0] //These are the diffs we can use for the equation
 			//Diff = dir*rotated - original
 			//Original = dir*rotated - diff
@@ -215,4 +224,17 @@ func flip_beacon_pairs(bp []beaconPair) []beaconPair {
 		new_pairs = append(new_pairs, beaconPair{original: b.rotated, rotated: b.original})
 	}
 	return new_pairs
+}
+
+func find_max_distance(b []beacon) int {
+	max_dist := 0
+	for i := range b {
+		for j := i; j < len(b); j++ {
+			d := distance(b[i], b[j])
+			if d > max_dist {
+				max_dist = d
+			}
+		}
+	}
+	return max_dist
 }

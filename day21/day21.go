@@ -86,21 +86,27 @@ func (p *player) roll_move_score_dirac(die_sum int) {
 	p.score += p.space
 }
 
-func play_dirac_game(cache map[state]result, r []rolls, p1, p2 player) result {
+func play_dirac_game(cache map[state]result, p1, p2 player) result {
 	//Check the cache
 	if val, ok := cache[state{p1, p2}]; ok {
 		return val
 	}
 	result := result{}
-	for _, roll := range r {
-		new_p1 := p1
-		new_p1.roll_move_score_dirac(roll.first + roll.second + roll.third)
-		if new_p1.score >= 21 {
-			result.p1_wins += 1
-		} else {
-			r := play_dirac_game(cache, r, p2, new_p1)
-			result.p1_wins += r.p2_wins
-			result.p2_wins += r.p1_wins
+
+	//Roll the die three times
+	for i := 1; i <= 3; i++ {
+		for j := 1; j <= 3; j++ {
+			for k := 1; k <= 3; k++ {
+				new_p1 := p1
+				new_p1.roll_move_score_dirac(i + j + k)
+				if new_p1.score >= 21 {
+					result.p1_wins += 1
+				} else {
+					r := play_dirac_game(cache, p2, new_p1)
+					result.p1_wins += r.p2_wins
+					result.p2_wins += r.p1_wins
+				}
+			}
 		}
 	}
 	cache[state{p1, p2}] = result
@@ -116,12 +122,8 @@ func main() {
 	//Part 2
 	p1 = player{space: 7}
 	p2 = player{space: 1}
-	rolls := []rolls{
-		{1, 1, 1}, {1, 1, 2}, {1, 1, 3}, {1, 2, 1}, {1, 2, 2}, {1, 2, 3}, {1, 3, 1}, {1, 3, 2}, {1, 3, 3},
-		{2, 1, 1}, {2, 1, 2}, {2, 1, 3}, {2, 2, 1}, {2, 2, 2}, {2, 2, 3}, {2, 3, 1}, {2, 3, 2}, {2, 3, 3},
-		{3, 1, 1}, {3, 1, 2}, {3, 1, 3}, {3, 2, 1}, {3, 2, 2}, {3, 2, 3}, {3, 3, 1}, {3, 3, 2}, {3, 3, 3}}
 
 	cache := make(map[state]result)
-	result := play_dirac_game(cache, rolls, p1, p2)
+	result := play_dirac_game(cache, p1, p2)
 	fmt.Println("Part 2:", result)
 }

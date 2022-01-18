@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -13,15 +12,15 @@ type point struct {
 	x, y, z int
 }
 
-type instruction struct {
+type cube struct {
 	on                                 bool
 	xmin, xmax, ymin, ymax, zmin, zmax int
 }
 
 func main() {
-	file, _ := os.Open("test.txt")
+	file, _ := os.Open("day22.txt")
 	fscanner := bufio.NewScanner(file)
-	inst := make([]instruction, 0)
+	inst := make([]cube, 0)
 
 	//Read in the data
 	for fscanner.Scan() {
@@ -44,7 +43,7 @@ func main() {
 		ymax, _ := strconv.Atoi(ys[1])
 		zmin, _ := strconv.Atoi(zs[0])
 		zmax, _ := strconv.Atoi(zs[1])
-		inst = append(inst, instruction{on, xmin, xmax, ymin, ymax, zmin, zmax})
+		inst = append(inst, cube{on, xmin, xmax, ymin, ymax, zmin, zmax})
 	}
 
 	//Apply the operations
@@ -53,48 +52,67 @@ func main() {
 	for _, in := range inst {
 		process_instruction(m, in)
 	}
-	fmt.Println("Part 1", count_lights(m))
+	fmt.Println("Part 1:", count_lights(m))
 
 	//Part 2
-	vols := make([]int, 0)
-	//infinite off instruction: represents starting point
-	start := instruction{false, math.MinInt, math.MaxInt, math.MinInt, math.MaxInt, math.MinInt, math.MaxInt}
-	vols = append(vols, intersect(start, inst[0]))
-	fmt.Println(vols)
+	var volumes []cube
 
-	for i := 1; i < len(inst); i++ {
-		for j := 0; j < i; j++ {
-			vol := intersect(inst[i], inst[j])
-			if vol != 0 {
-				vols = append(vols, vol)
+	for _, c := range inst {
+		var overlaps []cube
+
+		for _, finalCube := range volumes {
+			intersection, intersected := finalCube.getIntersection(c)
+			if intersected {
+				overlaps = append(overlaps, intersection)
 			}
 		}
-		// process_instruction(m, in)
+
+		if c.on {
+			overlaps = append(overlaps, c)
+		}
+
+		volumes = append(volumes, overlaps...)
 	}
-	fmt.Println(len(vols))
+
+	var cubes_on int
+	for _, c := range volumes {
+		cubes_on += c.getVolume()
+	}
+	fmt.Println("Part 2:", cubes_on)
 
 }
 
-func intersect(i1, i2 instruction) int {
-
-	xmin := max(i1.xmin, i2.xmin)
-	xmax := min(i1.xmax, i2.xmax)
-
-	ymin := max(i1.ymin, i2.ymin)
-	ymax := min(i1.ymax, i2.ymax)
-
-	zmin := max(i1.zmin, i2.zmin)
-	zmax := min(i1.zmax, i2.zmax)
+func (c cube) getIntersection(c2 cube) (cube, bool) {
+	xmin := max(c.xmin, c2.xmin)
+	xmax := min(c.xmax, c2.xmax)
+	ymin := max(c.ymin, c2.ymin)
+	ymax := min(c.ymax, c2.ymax)
+	zmin := max(c.zmin, c2.zmin)
+	zmax := min(c.zmax, c2.zmax)
 
 	if xmin > xmax || ymin > ymax || zmin > zmax {
-		return 0
+		return cube{}, false
 	}
-
-	return (xmax - xmin) * (ymax - ymin) * (zmax - zmin)
-
+	var on bool
+	if c.on && c2.on {
+		on = false
+	} else if !c.on && !c2.on {
+		on = true
+	} else {
+		on = c2.on
+	}
+	return cube{on, xmin, xmax, ymin, ymax, zmin, zmax}, true
 }
 
-func process_instruction(m map[point]bool, in instruction) {
+func (c cube) getVolume() int {
+	vol := (c.xmax - c.xmin + 1) * (c.ymax - c.ymin + 1) * (c.zmax - c.zmin + 1)
+	if c.on {
+		return vol
+	}
+	return -vol
+}
+
+func process_instruction(m map[point]bool, in cube) {
 	if (in.xmax < -50 || in.xmin > 50) && (in.ymax < -50 || in.ymin > 50) && (in.zmax < -50 || in.zmin > 50) {
 		return
 	}

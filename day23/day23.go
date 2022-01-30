@@ -26,7 +26,7 @@ type State struct {
 
 var starting_state = State{hallway: Hallway{46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46}, rooms: [4]Room{{68, 68}, {65, 67}, {67, 66}, {65, 66}}, cost: 0}
 var goal_state = State{hallway: Hallway{46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46}, rooms: [4]Room{{65, 65}, {66, 66}, {67, 67}, {68, 68}}, cost: math.MaxInt}
-var test_state = State{hallway: Hallway{66, 46, 46, 46, 46, 66, 46, 46, 46, 46, 46}, rooms: [4]Room{{46, 46}, {65, 65}, {67, 67}, {68, 68}}, cost: 0}
+var test_state = State{hallway: Hallway{66, 46, 46, 46, 46, 66, 46, 46, 46, 46, 46}, rooms: [4]Room{{65, 65}, {46, 46}, {67, 67}, {68, 68}}, cost: 0}
 
 //How much energy it costs each pod to move one square
 var costs = map[rune]int{65: 1, 66: 10, 67: 100, 68: 1000}
@@ -34,17 +34,14 @@ var costs = map[rune]int{65: 1, 66: 10, 67: 100, 68: 1000}
 //Maps room to entrance point in hallway
 var entrances = map[int]int{0: 2, 1: 4, 2: 6, 3: 8}
 
+//Map rune value of a pod to its home room
+var homes = map[rune]int{65: 0, 66: 1, 67: 2, 68: 3}
+
 func main() {
-	x := room_to_hallway(test_state)
-	fmt.Println("START")
-	runesToString(test_state.hallway[:])
-	runesToString(test_state.rooms[0][:])
-	runesToString(test_state.rooms[1][:])
-	runesToString(test_state.rooms[2][:])
-	runesToString(test_state.rooms[3][:])
+	x := hallway_to_room(test_state)
 	fmt.Println("START")
 	for _, st := range x {
-		runesToString(st.hallway[:])
+		displayState(st)
 	}
 
 }
@@ -110,14 +107,58 @@ func room_to_hallway(st State) []State {
 				//Record this new possible state
 				new_states = append(new_states, new_state)
 			}
-
 		}
 	}
 	return new_states
 }
 
-// func hallway_to_room(State) [][]State {}
-// func room_to_room(st State) [][]State {}
+func hallway_to_room(st State) []State {
+	var new_states []State
+
+Hallway_Walk:
+	for hallway_index, pod := range st.hallway {
+		//If this spot is empty, continue
+		if pod == 46 {
+			continue
+		}
+		//Check if this pod's home can be moved into
+		if !(st.rooms[homes[pod]] == Room{46, 46} || st.rooms[homes[pod]] == Room{46, pod}) {
+			continue
+		}
+
+		//Check if all spaces along the way are open
+		start := hallway_index
+		finish := entrances[homes[pod]]
+		fmt.Println(start, finish)
+		if start > finish {
+			start, finish = finish, start
+		}
+		for i := start; i <= finish; i++ {
+			if st.hallway[i] != 46 && i != hallway_index { //If this pod can't get home
+				continue Hallway_Walk
+			}
+		}
+
+		//Now, we know this pod can get home
+		new_state := st
+		//Remove this pod from the hallway
+		new_state.hallway[hallway_index] = 46
+		//Place this pod at the correct depth in its room
+		correct_depth := 1
+		if st.rooms[homes[pod]][1] == pod {
+			correct_depth = 0
+		}
+		new_state.rooms[homes[pod]][correct_depth] = pod
+		//Increase the cost
+		move_cost := costs[pod] * (absDiffInt(entrances[homes[pod]], hallway_index) + (correct_depth + 1))
+		new_state.cost += move_cost
+		//Record this new possible state
+		new_states = append(new_states, new_state)
+	}
+	return new_states
+}
+
+// func room_to_room(st State) []State {}
 // func generate_moves(State) []State {}
 
 func absDiffInt(x, y int) int {
@@ -127,11 +168,11 @@ func absDiffInt(x, y int) int {
 	return x - y
 }
 
-func runesToString(runes []rune) {
+func displayState(st State) {
 	// don't need index so _
 	outString := ""
-	for _, v := range runes {
+	for _, v := range st.hallway {
 		outString += string(v)
 	}
-	fmt.Println(outString)
+	fmt.Println(outString, st.cost)
 }

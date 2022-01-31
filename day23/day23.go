@@ -1,8 +1,8 @@
 package main
 
 import (
+	"container/heap"
 	"fmt"
-	"math"
 )
 
 //Rune values of A,B,C,D,. : 65,66,67,68,46
@@ -25,8 +25,9 @@ type State struct {
 */
 
 var starting_state = State{hallway: Hallway{46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46}, rooms: [4]Room{{68, 68}, {65, 67}, {67, 66}, {65, 66}}, cost: 0}
-var goal_state = State{hallway: Hallway{46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46}, rooms: [4]Room{{65, 65}, {66, 66}, {67, 67}, {68, 68}}, cost: math.MaxInt}
-var test_state = State{hallway: Hallway{46, 66, 46, 46, 46, 46, 46, 46, 46, 46, 67}, rooms: [4]Room{{65, 65}, {46, 66}, {66, 67}, {68, 68}}, cost: 0}
+var goal_state = State{hallway: Hallway{46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46}, rooms: [4]Room{{65, 65}, {66, 66}, {67, 67}, {68, 68}}, cost: 0}
+
+// var starting_state = State{hallway: Hallway{46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46}, rooms: [4]Room{{66, 65}, {67, 68}, {66, 67}, {68, 65}}, cost: 0}
 
 //How much energy it costs each pod to move one square
 var costs = map[rune]int{65: 1, 66: 10, 67: 100, 68: 1000}
@@ -38,13 +39,56 @@ var entrances = map[int]int{0: 2, 1: 4, 2: 6, 3: 8}
 var homes = map[rune]int{65: 0, 66: 1, 67: 2, 68: 3}
 
 func main() {
-	x := generate_moves(starting_state)
-	displayState(test_state)
-	fmt.Println("START")
-	for _, st := range x {
-		displayState(st)
-	}
+	dists := make(map[State]int, 1)
+	dists[starting_state] = 0
 
+	//Create the priority queue for Dijkstra
+	pq := make(PriorityQueue, 1)
+	//Keep a map for quick state access
+	items := make(map[State]*Item, 0)
+
+	it := Item{state: starting_state, priority: 0, index: 0}
+	pq[0] = &it
+	items[starting_state] = &it
+
+	heap.Init(&pq)
+
+	//Run Dijkstra
+	for len(pq) > 0 {
+		//Extract Mind
+		u := *(heap.Pop(&pq).(*Item))
+
+		//For each neighbor v of u
+		neighbors := generate_moves(u.state)
+		for _, neighbor := range neighbors {
+			//Calculate edge weight distance for this neighbor
+			edge_weight := neighbor.cost
+			//Now, set the cost to zero, since all states in the map will have 0 cost
+			neighbor.cost = 0
+
+			//Now, Gotta check 2 things
+			//1. If it's not in the dists map yet, its dist is infinite so we add_with_priority to the queue
+			if _, ok := dists[neighbor]; !ok {
+				alt := dists[u.state] + edge_weight
+				//Create the item
+				it := &Item{state: neighbor, priority: alt}
+				items[neighbor] = it
+				//Append then update
+				heap.Push(&pq, it)
+				pq.update(it, it.state, alt)
+				dists[neighbor] = alt
+			} else /* 2. If it is in the dists map, */ {
+				//Calculate the new potential distance
+				alt := dists[u.state] + edge_weight
+				if alt < dists[neighbor] {
+					//If it is smaller than its current distances, replace it and update the priority queue
+					dists[neighbor] = alt
+					pq.update(items[neighbor], neighbor, alt)
+				}
+			}
+		}
+	}
+	fmt.Println(dists[goal_state])
 }
 
 func room_to_hallway(st State) []State {

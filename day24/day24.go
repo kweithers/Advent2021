@@ -8,281 +8,116 @@ import (
 	"strings"
 )
 
-//How to use the empty interface to handle different possible types//
-/* func print_out_type(x interface{}) string {
-    switch v := x.(type) {
-        case string:
-             return "A string"
-        case int32:
-             return "An Integer"
-        default:
-             return "A default"
-    }
-}
-*/
-
-type alu struct {
-	w, x, y, z int //Contains four data registers
-}
-
-type instruction struct {
-	i string      //One of six legal instructions
-	a string      //Always one of w,x,y,z. Also where the result of the operation in stored
-	b interface{} //Either 1) one of w,x,y,z or 2) an int
-}
-
-func (a *alu) inp(i instruction, v int) {
-	switch i.a {
-	case "w":
-		a.w = v
-	case "x":
-		a.x = v
-	case "y":
-		a.y = v
-	case "z":
-		a.z = v
-	default:
-		panic("STINKY")
-	}
-}
-
-func (a *alu) add(i instruction) {
-	var temp int
-
-	switch t := i.b.(type) {
-	case string:
-		switch i.b {
-		case "w":
-			temp = a.w
-		case "x":
-			temp = a.x
-		case "y":
-			temp = a.y
-		case "z":
-			temp = a.z
-		default:
-			panic("STINKY")
-		}
-	case int:
-		temp = i.b.(int)
-	default:
-		panic(t)
-	}
-
-	switch i.a {
-	case "w":
-		a.w += temp
-	case "x":
-		a.x += temp
-	case "y":
-		a.y += temp
-	case "z":
-		a.z += temp
-	}
-}
-
-func (a *alu) mul(i instruction) {
-	var temp int
-
-	switch t := i.b.(type) {
-	case string:
-		switch i.b {
-		case "w":
-			temp = a.w
-		case "x":
-			temp = a.x
-		case "y":
-			temp = a.y
-		case "z":
-			temp = a.z
-		default:
-			panic("STINKY")
-		}
-	case int:
-		temp = i.b.(int)
-	default:
-		panic(t)
-	}
-
-	switch i.a {
-	case "w":
-		a.w *= temp
-	case "x":
-		a.x *= temp
-	case "y":
-		a.y *= temp
-	case "z":
-		a.z *= temp
-	}
-}
-
-func (a *alu) div(i instruction) {
-	var temp int
-
-	switch t := i.b.(type) {
-	case string:
-		switch i.b {
-		case "w":
-			temp = a.w
-		case "x":
-			temp = a.x
-		case "y":
-			temp = a.y
-		case "z":
-			temp = a.z
-		default:
-			panic("STINKY")
-		}
-	case int:
-		temp = i.b.(int)
-	default:
-		panic(t)
-	}
-
-	switch i.a {
-	case "w":
-		a.w /= temp
-	case "x":
-		a.x /= temp
-	case "y":
-		a.y /= temp
-	case "z":
-		a.z /= temp
-	}
-}
-
-func (a *alu) mod(i instruction) {
-	var temp int
-
-	switch t := i.b.(type) {
-	case string:
-		switch i.b {
-		case "w":
-			temp = a.w
-		case "x":
-			temp = a.x
-		case "y":
-			temp = a.y
-		case "z":
-			temp = a.z
-		default:
-			panic("STINKY")
-		}
-	case int:
-		temp = i.b.(int)
-	default:
-		panic(t)
-	}
-	switch i.a {
-	case "w":
-		a.w %= temp
-	case "x":
-		a.x %= temp
-	case "y":
-		a.y %= temp
-	case "z":
-		a.z %= temp
-	}
-}
-
-func (a *alu) eq(i instruction) {
-	var temp int
-
-	switch t := i.b.(type) {
-	case string:
-		switch i.b {
-		case "w":
-			temp = a.w
-		case "x":
-			temp = a.x
-		case "y":
-			temp = a.y
-		case "z":
-			temp = a.z
-		}
-	case int:
-		temp = i.b.(int)
-	default:
-		panic(t)
-	}
-
-	switch i.a {
-	case "w":
-		if a.w == temp {
-			a.w = 1
-		} else {
-			a.w = 0
-		}
-	case "x":
-		if a.x == temp {
-			a.x = 1
-		} else {
-			a.x = 0
-		}
-	case "y":
-		if a.y == temp {
-			a.y = 1
-		} else {
-			a.y = 0
-		}
-	case "z":
-		if a.z == temp {
-			a.z = 1
-		} else {
-			a.z = 0
-		}
-	}
+type pair struct {
+	first, second int
 }
 
 func main() {
 	file, _ := os.Open("day24.txt")
 	fscanner := bufio.NewScanner(file)
-	var instructions []instruction
+
+	var As, Bs, Cs []int
 
 	//Read in the instructions
+	i := 1
 	for fscanner.Scan() {
 		line := fscanner.Text()
 		parts := strings.Split(line, " ")
 
-		var in instruction
-		if parts[0] == "inp" {
-			in = instruction{i: parts[0], a: parts[1]}
-		} else {
-			v, err := strconv.Atoi(parts[2])
-			if err == nil {
-				in = instruction{i: parts[0], a: parts[1], b: v}
-			} else {
-				in = instruction{i: parts[0], a: parts[1], b: parts[2]}
-			}
+		if i%18 == 1 {
+			i++
+			continue
 		}
-		instructions = append(instructions, in)
+		v, _ := strconv.Atoi(parts[2])
+
+		//The only instructions that change are lines 5,6,16
+		if i%18 == 5 {
+			As = append(As, v)
+		} else if i%18 == 6 {
+			Bs = append(Bs, v)
+		} else if i%18 == 16 {
+			Cs = append(Cs, v)
+		}
+		i++
 	}
 
-	for n := 1; n < 10; n++ {
-		a := alu{}
-		str_n := strconv.Itoa(n)
-		current_index := 0
+	pairs := []pair{{0, 13}, {1, 12}, {2, 3}, {4, 5}, {6, 7}, {8, 11}, {9, 10}}
 
-		for _, in := range instructions {
-			switch in.i {
-			case "inp":
-				digit, _ := strconv.Atoi(string(str_n[current_index : current_index+1]))
-				a.inp(in, digit)
-				current_index++
-			case "add":
-				a.add(in)
-			case "mul":
-				a.mul(in)
-			case "div":
-				a.div(in)
-			case "mod":
-				a.mod(in)
-			case "eq":
-				a.eq(in)
+	var results []pair
+	for _, p := range pairs {
+		results = append(results, find_match(As[p.first], Bs[p.first], Cs[p.first], As[p.second], Bs[p.second], Cs[p.second], true))
+	}
+	fmt.Println("MAX")
+	fmt.Println(pairs)
+	fmt.Println(results)
+
+	results = []pair{}
+	for _, p := range pairs {
+		results = append(results, find_match(As[p.first], Bs[p.first], Cs[p.first], As[p.second], Bs[p.second], Cs[p.second], false))
+	}
+	fmt.Println("MIN")
+	fmt.Println(pairs)
+	fmt.Println(results)
+
+}
+
+func find_match(a, b, c, a2, b2, c2 int, max bool) pair {
+	var x, z int
+
+	if max {
+		for w := 9; w > 0; w-- {
+			for w2 := 9; w2 > 0; w2-- {
+
+				x, z = 0, 0
+				x_bool := ((z%26)+b != w)
+				if x_bool {
+					x = 1
+				}
+				z /= a
+				z *= 25*x + 1
+				z += (w + c) * x
+
+				x = 0
+				x_bool = ((z%26)+b2 != w2)
+				if x_bool {
+					x = 1
+				}
+				z /= a2
+				z *= 25*x + 1
+				z += (w2 + c2) * x
+
+				if z == 0 {
+					return pair{w, w2}
+				}
 			}
 		}
+	} else {
+		for w := 1; w < 10; w++ {
+			for w2 := 1; w2 < 10; w2++ {
 
-		fmt.Println(n, a.z)
+				x, z = 0, 0
+				x_bool := ((z%26)+b != w)
+				if x_bool {
+					x = 1
+				}
+				z /= a
+				z *= 25*x + 1
+				z += (w + c) * x
+
+				x = 0
+				x_bool = ((z%26)+b2 != w2)
+				if x_bool {
+					x = 1
+				}
+				z /= a2
+				z *= 25*x + 1
+				z += (w2 + c2) * x
+
+				if z == 0 {
+					return pair{w, w2}
+				}
+			}
+		}
 	}
-
+	panic("NO MATCH")
 }

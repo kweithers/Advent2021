@@ -2,6 +2,8 @@
 
 https://adventofcode.com/2021/
 
-This year, I'm improving my Go skills.
+This year, I improved my Go skills.
 
 ![](festive_gopher.jpg)
+
+![](advent_calendar.jpg)
